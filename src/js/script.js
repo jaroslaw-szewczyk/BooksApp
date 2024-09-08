@@ -28,137 +28,116 @@
     booksFilter: [],
   };
 
-  function books(data) {
-
-    //list from the DOM
-    const booksList = document.querySelector(select.bookHTML.booksList);
-
-    //Loop over each element in the data array 
-    for(const item of data){
-
-      // Conversion of assessment to a percentage scale
-      const ratingWidth = (item.rating * 10) + '%';
-
-      // Determining the background based on the evaluation
-      const ratingBgc = determinRatingBgc(item.rating);
-      
-      //adding value to an object
-      item.ratingWidth = ratingWidth;
-      item.ratingBgc = ratingBgc;
-
-      //Generation of HTML code for a single book
-      const generatedHTML = templates.books(item);
-
-      const element = utils.createDOMFromHTML(generatedHTML);
-
-      console.log(item);
-
-      booksList.appendChild(element);
-    }    
-  }
-
-  function initAction() {
-
-    //Selecting image book from DOM 
-    const books = document.querySelector(select.bookHTML.booksList);
-
-    //Selecting books filters from DOM
-    const booksFilters = document.querySelector(select.sectionFilters.filters);
-
-    //Listening to the book list
-    books.addEventListener('dblclick', event => {
-      event.preventDefault();
-
-      //finding the book img parent
-      const bookImgParent = event.target.closest(select.bookHTML.bookImage);
-
-      //Checking whether the clicked element is valid, i.e. contains the book__image class
-      if(bookImgParent.classList.contains('book__image')){
-
-        //Getting the book id from the data-id
-        const bookId = bookImgParent.getAttribute(select.bookHTML.bookAttribute);
-                
-        //Checking whether the Id is already in the favoriteBooks array
-        if(settings.favoriteBooks.includes(bookId)){
-          //removing a favourite class to a clicked element
-          bookImgParent.classList.remove(select.book.favorite);
-                    
-          //finding an index in an array 
-          const idIndex = settings.favoriteBooks.indexOf(bookId);
-
-          //removing bookId to favoriteBooks array
-          settings.favoriteBooks.splice(idIndex, 1);
-        } else {
-          //adding a favourite class to a clicked element
-          bookImgParent.classList.add(select.book.favorite);
-
-          //Adding bookId to favoriteBooks array
-          settings.favoriteBooks.push(bookId);    
-        }  
-      } 
-    });
-    
-    //Listening to the books filters
-    booksFilters.addEventListener('click', event =>{
-    
-      // Checking whether the clicked field is correct
-      if(event.target.tagName == 'INPUT' 
-          && event.target.type == 'checkbox' 
-          && event.target.name == 'filter') {
-                
-        //Checking whether a given value is in an array
-        if(event.target.checked){
-          //Adding value to array
-          settings.booksFilter.push(event.target.value);
-          filter();
-        } else {
-          //removing vallue from array
-          const indexOfInput = settings.booksFilter.indexOf(event.target.value);
-          settings.booksFilter.splice(indexOfInput, 1);
-          filter();
-        }
+  class BookList {
+    constructor(data) {
+      this.data = data;
+      this.booksList = document.querySelector(select.bookHTML.booksList);
+      this.favoriteBooks = settings.favoriteBooks;
+      this.filters = settings.booksFilter;
+  
+      // Initialize
+      this.initData();
+      this.initActions();
+    }
+  
+    // Function to initialize data
+    initData() {
+      this.renderBooks(this.data);
+    }
+  
+    // Rendering books
+    renderBooks(data) {
+      for (const item of data) {
+        const ratingWidth = (item.rating * 10) + '%'; // Convert rating to percentage scale
+        const ratingBgc = this.determineRatingBgc(item.rating); // Determine background based on rating
+  
+        item.ratingWidth = ratingWidth;
+        item.ratingBgc = ratingBgc;
+  
+        // Generate HTML for each book
+        const generatedHTML = templates.books(item);
+        const element = utils.createDOMFromHTML(generatedHTML);
+  
+        this.booksList.appendChild(element);
       }
-    });
-  }
-
-  function filter() {
-    
-    console.log(settings.booksFilter);
-
-    for(const book of dataSource.books){
-      
-      let shouldBeHidden = false;
-
-      for(const bookFilter of settings.booksFilter){
-        
-        if(book.details[bookFilter]) {
-          shouldBeHidden = true;
-          break;
-        }
-      }
-
-      const correctBook = document.querySelector('.book__image[data-id="' + book.id + '"]');
-      
-      if(shouldBeHidden === true){
-        correctBook.classList.add(select.book.hidden);
+    }
+  
+    // Function to determine background color based on rating
+    determineRatingBgc(rating) {
+      if (rating < 6) {
+        return 'linear-gradient(to bottom, #fefcea 0%, #f1da36 100%)';
+      } else if (rating <= 8) {
+        return 'linear-gradient(to bottom, #b4df5b 0%, #b4df5b 100%)';
+      } else if (rating <= 9) {
+        return 'linear-gradient(to bottom, #299a0b 0%, #299a0b 100%)';
       } else {
-        correctBook.classList.remove(select.book.hidden);
+        return 'linear-gradient(to bottom, #ff0084 0%, #ff0084 100%)';
+      }
+    }
+  
+    // Function to handle user actions (clicks, filters)
+    initActions() {
+      const booksFilters = document.querySelector(select.sectionFilters.filters);
+  
+      // Listen for double-click on book images to add/remove favorites
+      this.booksList.addEventListener('dblclick', event => {
+        event.preventDefault();
+  
+        const bookImgParent = event.target.closest(select.bookHTML.bookImage);
+  
+        if (bookImgParent.classList.contains('book__image')) {
+          const bookId = bookImgParent.getAttribute(select.bookHTML.bookAttribute);
+  
+          // Check if the book is already in the favorites
+          if (this.favoriteBooks.includes(bookId)) {
+            bookImgParent.classList.remove(select.book.favorite);
+            const idIndex = this.favoriteBooks.indexOf(bookId);
+            this.favoriteBooks.splice(idIndex, 1);
+          } else {
+            bookImgParent.classList.add(select.book.favorite);
+            this.favoriteBooks.push(bookId);
+          }
+        }
+      });
+  
+      // Listen for clicks on filters
+      booksFilters.addEventListener('click', event => {
+        if (event.target.tagName === 'INPUT' && event.target.type === 'checkbox' && event.target.name === 'filter') {
+          if (event.target.checked) {
+            this.filters.push(event.target.value);
+          } else {
+            const indexOfInput = this.filters.indexOf(event.target.value);
+            this.filters.splice(indexOfInput, 1);
+          }
+          this.filterBooks();
+        }
+      });
+    }
+  
+    // Function to filter books based on selected filters
+    filterBooks() {
+      for (const book of this.data) {
+        let shouldBeHidden = false;
+  
+        for (const bookFilter of this.filters) {
+          if (book.details[bookFilter]) {
+            shouldBeHidden = true;
+            break;
+          }
+        }
+  
+        const correctBook = document.querySelector('.book__image[data-id="' + book.id + '"]');
+  
+        if (shouldBeHidden) {
+          correctBook.classList.add(select.book.hidden);
+        } else {
+          correctBook.classList.remove(select.book.hidden);
+        }
       }
     }
   }
-
-  function determinRatingBgc(rating){
-    if(rating < 6) {
-      return 'linear-gradient(to bottom, #fefcea 0%, #f1da36 100%)';
-    } else if(rating <= 8) {
-      return 'linear-gradient(to bottom, #b4df5b 0%, #b4df5b 100%)';
-    } else if(rating <= 9){
-      return 'linear-gradient(to bottom, #299a0b 0%, #299a0b 100%)';
-    } else {
-      return 'linear-gradient(to bottom, #ff0084 0%, #ff0084 100%);';
-    }
-  }
-
-  books(dataSource.books);
-  initAction();
+  
+  // Initialize the BookList class
+  const app = new BookList(dataSource.books);
+  app;
 }
